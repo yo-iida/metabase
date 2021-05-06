@@ -27,6 +27,7 @@ export default createEntity({
           archived,
           model,
           namespace,
+          pinned,
           ...unsupported
         } = query;
         if (Object.keys(unsupported).length > 0) {
@@ -40,6 +41,7 @@ export default createEntity({
           archived,
           model,
           namespace,
+          pinned,
         })).map(item => ({
           collection_id: canonicalCollectionId(collection),
           archived: archived || false,

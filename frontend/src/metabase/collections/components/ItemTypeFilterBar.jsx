@@ -32,11 +32,10 @@ export const FILTERS = [
   },
 ];
 
-const ItemTypeFilterBar = props => {
-  const { location, analyticsContext } = props;
+const ItemTypeFilterBar = ({ location, analyticsContext, filters, onFilterChange }) => {
   return (
     <Flex align="center" className="border-bottom mt1">
-      {props.filters.map(f => {
+      {filters.map(f => {
         let isActive = location && location.query.type === f.filter;
 
         if (!location.query.type && !f.filter) {
@@ -51,6 +50,7 @@ const ItemTypeFilterBar = props => {
               pathname: location.pathname,
               query: { ...location.query, type: f.filter },
             }}
+            onClick={onFilterChange}
             color={linkColor}
             hover={{ color: color("brand") }}
             className="flex-full flex align-center justify-center sm-block text-brand-hover text-medium"

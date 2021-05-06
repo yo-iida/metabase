@@ -18,35 +18,14 @@ import ItemList from "metabase/collections/components/ItemList";
 import PinnedItems from "metabase/collections/components/PinnedItems";
 
 import ItemsDragLayer from "metabase/containers/dnd/ItemsDragLayer";
+import PaginationControls from "metabase/components/PaginationControls";
 
-@Search.loadList({
-  query: (state, props) => ({ collection: props.collectionId }),
-  wrapped: true,
-})
+const PAGE_SIZE = 25;
+
 @Collection.load({
-  id: (state, props) => props.collectionId,
+  id: (_, props) => props.collectionId,
   reload: true,
 })
-@connect((state, props) => {
-  // split out collections, pinned, and unpinned since bulk actions only apply to unpinned
-  const [collections, items] = _.partition(
-    props.list,
-    item => item.model === "collection",
-  );
-  const [pinned, unpinned] = _.partition(
-    items,
-    item => item.collection_position != null,
-  );
-  // sort the pinned items by collection_position
-  pinned.sort((a, b) => a.collection_position - b.collection_position);
-  return {
-    collections,
-    pinned,
-    unpinned,
-    isAdmin: getUserIsAdmin(state),
-  };
-})
-// only apply bulk actions to unpinned items
 @listSelect({
   listProp: "unpinned",
   keyForItem: item => `${item.model}:${item.id}`,
@@ -56,6 +35,8 @@ export default class CollectionContent extends React.Component {
   state = {
     selectedItems: null,
     selectedAction: null,
+
+    page: 0,
   };
 
   handleBulkArchive = async () => {
@@ -97,13 +78,24 @@ export default class CollectionContent extends React.Component {
     this.setState({ selectedItems: null, selectedAction: null });
   };
 
+  handleNextPage = () =>
+    this.setState(prev => ({
+      page: prev.page + 1,
+    }));
+
+  handlePreviousPage = () =>
+    this.setState(prev => ({
+      page: prev.page - 1,
+    }));
+
+  handleFilterChange = () => {
+    this.setState({ page: 0 })
+  }
+
   render() {
     const {
       collection,
       collectionId,
-
-      pinned,
-      unpinned,
 
       isAdmin,
       isRoot,
@@ -115,86 +107,113 @@ export default class CollectionContent extends React.Component {
 
       scrollElement,
     } = this.props;
-    const { selectedItems, selectedAction } = this.state;
 
-    let unpinnedItems = unpinned;
+    const { selectedItems, selectedAction, page } = this.state;
 
-    if (location.query.type) {
-      unpinnedItems = unpinned.filter(u => u.model === location.query.type);
-    }
+    const unpinnedQuery = {
+      collection: collectionId,
+      pinned: false,
+      // TODO: not yet supported
+      // models: location.query.type,
+      // limit: PAGE_SIZE,
+      // offset: PAGE_SIZE * page,
+    };
 
-    const collectionHasPins = pinned.length > 0;
-
-    const avaliableTypes = _.uniq(unpinned.map(u => u.model));
-    const showFilters = unpinned.length > 5 && avaliableTypes.length > 1;
+    const pinnedQuery = {
+      collection: collectionId,
+      pinned: true,
+    };
 
     return (
-      <Box pt={2}>
-        <Box w={"80%"} ml="auto" mr="auto">
-          <Header
-            isRoot={isRoot}
-            isAdmin={isAdmin}
-            collectionId={collectionId}
-            showFilters={showFilters}
-            collectionHasPins={collectionHasPins}
-            collection={collection}
-            unpinnedItems={unpinnedItems}
-          />
-          {collectionHasPins && (
-            <PinnedItems
-              items={pinned}
-              collection={collection}
-              onMove={selectedItems =>
-                this.setState({
-                  selectedItems,
-                  selectedAction: "move",
-                })
-              }
-              onCopy={selectedItems =>
-                this.setState({
-                  selectedItems,
-                  selectedAction: "copy",
-                })
-              }
-            />
-          )}
-          <ItemList
-            scrollElement={scrollElement}
-            items={unpinnedItems}
-            empty={unpinned.length === 0}
-            showFilters={showFilters}
-            selection={selection}
-            collection={collection}
-            onToggleSelected={onToggleSelected}
-            collectionHasPins={collectionHasPins}
-            onMove={selectedItems =>
-              this.setState({
-                selectedItems,
-                selectedAction: "move",
-              })
-            }
-            onCopy={selectedItems =>
-              this.setState({
-                selectedItems,
-                selectedAction: "copy",
-              })
-            }
-          />
-        </Box>
-        <BulkActions
-          selected={selected}
-          onSelectAll={this.props.onSelectAll}
-          onSelectNone={this.props.onSelectNone}
-          handleBulkArchive={this.handleBulkArchive}
-          handleBulkMoveStart={this.handleBulkMoveStart}
-          handleBulkMove={this.handleBulkMove}
-          handleCloseModal={this.handleCloseModal}
-          deselected={deselected}
-          selectedItems={selectedItems}
-          selectedAction={selectedAction}
-        />
-        <ItemsDragLayer selected={selected} />
-      </Box>
+      <Search.ListLoader query={unpinnedQuery} wrapped>
+        {({ list: unpinnedItems, total }) => {
+          const showFilters = unpinnedItems.length > 5;
+          return (
+            <Search.ListLoader query={pinnedQuery} wrapped>
+              {({ list: pinnedItems }) => (
+                <Box pt={2}>
+                  <Box w={"80%"} ml="auto" mr="auto">
+                    <Header
+                      isRoot={isRoot}
+                      isAdmin={isAdmin}
+                      collectionId={collectionId}
+                      showFilters={showFilters}
+                      collectionHasPins={pinnedItems.length > 0}
+                      collection={collection}
+                      unpinnedItems={unpinnedItems}
+                    />
+
+                    <PinnedItems
+                      items={pinnedItems}
+                      collection={collection}
+                      onMove={selectedItems =>
+                        this.setState({
+                          selectedItems,
+                          selectedAction: "move",
+                        })
+                      }
+                      onCopy={selectedItems =>
+                        this.setState({
+                          selectedItems,
+                          selectedAction: "copy",
+                        })
+                      }
+                    />
+
+                    <ItemList
+                      scrollElement={scrollElement}
+                      items={unpinnedItems}
+                      empty={unpinnedItems.length === 0}
+                      showFilters={showFilters}
+                      selection={selection}
+                      collection={collection}
+                      onToggleSelected={onToggleSelected}
+                      collectionHasPins={pinnedItems.length > 0}
+                      onFilterChange={this.handleFilterChange}
+                      onMove={selectedItems =>
+                        this.setState({
+                          selectedItems,
+                          selectedAction: "move",
+                        })
+                      }
+                      onCopy={selectedItems =>
+                        this.setState({
+                          selectedItems,
+                          selectedAction: "copy",
+                        })
+                      }
+                    />
+                    <div className="flex justify-end my3">
+                      <PaginationControls
+                        showTotal
+                        page={page}
+                        pageSize={PAGE_SIZE}
+                        total={total}
+                        itemsLength={unpinnedItems.length}
+                        onNextPage={this.handleNextPage}
+                        onPreviousPage={this.handlePreviousPage}
+                      />
+                    </div>
+                  </Box>
+                  <BulkActions
+                    selected={selected}
+                    onSelectAll={this.props.onSelectAll}
+                    onSelectNone={this.props.onSelectNone}
+                    handleBulkArchive={this.handleBulkArchive}
+                    handleBulkMoveStart={this.handleBulkMoveStart}
+                    handleBulkMove={this.handleBulkMove}
+                    handleCloseModal={this.handleCloseModal}
+                    deselected={deselected}
+                    selectedItems={selectedItems}
+                    selectedAction={selectedAction}
+                  />
+                  <ItemsDragLayer selected={selected} />
+                </Box>
+              )}
+            </Search.ListLoader>
+          );
+        }}
+      </Search.ListLoader>
     );
   }
 }

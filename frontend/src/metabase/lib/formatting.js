@@ -38,7 +38,10 @@ import {
   getTimeFormatFromStyle,
   hasHour,
 } from "metabase/lib/formatting/date";
-import { renderLinkTextForClick } from "metabase/lib/formatting/link";
+import {
+  renderLinkTextForClick,
+  renderLinkURLForClick,
+} from "metabase/lib/formatting/link";
 import { NULL_NUMERIC_VALUE, NULL_DISPLAY_VALUE } from "metabase/lib/constants";
 
 import type Field from "metabase-lib/lib/metadata/Field";
@@ -585,6 +588,24 @@ function isDefaultLinkProtocol(protocol) {
   );
 }
 
+export function formatLink(options) {
+  // TODO: handle non JSX?
+  const label = renderLinkTextForClick(
+    options.link_text || "",
+    getDataFromClicked(options.clicked),
+  );
+  const url = renderLinkURLForClick(
+    options.link_url,
+    getDataFromClicked(options.clicked),
+  );
+
+  return (
+    <ExternalLink className="link link--wrappable" href={url}>
+      {label}
+    </ExternalLink>
+  );
+}
+
 export function formatUrl(value: Value, options: FormattingOptions = {}) {
   const { jsx, rich, view_as, column, link_text } = options;
   const url = value;
@@ -752,9 +773,10 @@ export function formatValueRaw(value: Value, options: FormattingOptions = {}) {
       options.click_behavior.linkTextTemplate,
       getDataFromClicked(options.clicked),
     );
+  } else if (options.view_as === "link") {
+    return formatLink(options);
   } else if (
-    (isURL(column) && options.view_as !== null) ||
-    options.view_as === "link"
+    (isURL(column) && options.view_as !== null)
   ) {
     return formatUrl(value, options);
   } else if (isEmail(column)) {

@@ -203,7 +203,8 @@
                                                               card-id-native-query
                                                               card-id-root-to-collection
                                                               card-id-collection-to-root
-                                                              card-id-template-tags])
+                                                              card-id-template-tags
+                                                              card-id-filter-agg])
                          :collections   (gather-collections [card-id
                                                              card-arch-id
                                                              card-id-root
@@ -212,7 +213,8 @@
                                                              card-id-native-query
                                                              card-id-root-to-collection
                                                              card-id-collection-to-root
-                                                             card-id-template-tags])
+                                                             card-id-template-tags
+                                                             card-id-filter-agg])
                          :entities      [[Database      (Database db-id)]
                                          [Table         (Table table-id)]
                                          [Field         (Field numeric-field-id)]
@@ -239,7 +241,8 @@
                                          [Card          (Card card-id-collection-to-root)]
                                          [Card          (Card card-id-template-tags)]
                                          [DashboardCard (DashboardCard dashcard-with-textbox-id)]
-                                         [Pulse         (Pulse pulse-id)]]})]
+                                         [Pulse         (Pulse pulse-id)]
+                                         [Card          (Card card-id-filter-agg)]]})]
       (with-world-cleanup
         (load dump-dir {:on-error :continue :mode :update})
         (doseq [[model entity] (:entities fingerprint)]

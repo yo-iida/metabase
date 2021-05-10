@@ -5,7 +5,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [medley.core :as m]
-            [metabase-enterprise.serialization.names :refer [fully-qualified-name->context]]
+            [metabase-enterprise.serialization.names :as names :refer [fully-qualified-name->context]]
             [metabase-enterprise.serialization.upsert :refer [maybe-fixup-card-template-ids! maybe-upsert-many!]]
             [metabase.config :as config]
             [metabase.mbql.normalize :as mbql.normalize]
@@ -67,7 +67,7 @@
     [:field-id (fully-qualified-name :guard string?)]
     (mbql-fully-qualified-names->ids [:field fully-qualified-name nil])
 
-    [:field (fully-qualified-name :guard string?) opts]
+    [:field (fully-qualified-name :guard names/fully-qualified-field-name?) opts]
     [:field (:field (fully-qualified-name->context fully-qualified-name)) (mbql-fully-qualified-names->ids opts)]
 
     ;; source-field is also used within parameter mapping dimensions
